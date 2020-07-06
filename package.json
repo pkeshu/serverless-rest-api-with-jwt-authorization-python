@@ -1,7 +1,7 @@
 {
-  "name": "aws-rest-with-dynamodb",
+  "name": "aws-rest-with-dynamodb-with-authorization-python",
   "version": "1.0.0",
-  "description": "Serverless CRUD service exposing a REST HTTP interface",
-  "author": "",
+  "description": "Serverless CRUD service exposing a REST HTTP interface with authorization",
+  "author": "Keshar paudel",
   "license": "MIT"
 }
