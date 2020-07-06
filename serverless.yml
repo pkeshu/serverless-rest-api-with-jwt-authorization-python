@@ -1,0 +1,118 @@
+service: serverless-rest-api-with-dynamodb
+
+#frameworkVersion: ">=1.1.0 <2.0.0"
+#package:
+#  exclude:
+#    - ./**
+#  include:
+#    - vendored/**
+#    - lambda_handlers.py
+
+provider:
+  name: aws
+  runtime: python3.8
+  region: ap-southeast-1
+  environment:
+    DYNAMODB_TABLE: ${self:service}-${opt:stage, self:provider.stage}
+    JWT_SECRET: ${file(./secrets.json):JWT_SECRET}
+    AWS_ID: ${file(./secrets.json):AWS_ID}
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:Query
+        - dynamodb:Scan
+        - dynamodb:GetItem
+        - dynamodb:PutItem
+        - dynamodb:UpdateItem
+        - dynamodb:DeleteItem
+      Resource: "arn:aws:dynamodb:${opt:region, self:provider.region}:*:table/${self:provider.environment.DYNAMODB_TABLE}"
+
+functions:
+  check_token:
+    name: AuthorizationFunction
+    handler: auth/authorize.handler
+    cors: true
+  create:
+    handler: todos/create.create
+    events:
+      - http:
+          path: todos
+          method: post
+          cors: true
+
+  list:
+    handler: todos/list.list
+    events:
+      - http:
+          path: todos
+          method: get
+          cors: true
+          authorizer:
+            name: check_token
+            identitySource: method.request.header.token
+            reultTtlInSeconds: 3600
+
+  get:
+    handler: todos/get.get
+    events:
+      - http:
+          path: todos/{id}
+          method: get
+          cors: true
+
+  update:
+    handler: todos/update.update
+    events:
+      - http:
+          path: todos/{id}
+          method: put
+          cors: true
+
+  delete:
+    handler: todos/delete.delete
+    events:
+      - http:
+          path: todos/{id}
+          method: delete
+          cors: true
+
+resources:
+  Resources:
+    TodosDynamoDbTable:
+      Type: 'AWS::DynamoDB::Table'
+      DeletionPolicy: Retain
+      Properties:
+        AttributeDefinitions:
+          -
+            AttributeName: id
+            AttributeType: S
+        KeySchema:
+          -
+            AttributeName: id
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+        TableName: ${self:provider.environment.DYNAMODB_TABLE}
+
+#    GatewayResponse:
+#      Type: 'AWS::ApiGateway::GatewayResponse'
+#      Properties:
+#        ResponseParameters:
+#          gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
+#          gatewayresponse.header.Access-Control-Allow-Headers: "'*'"
+#        ResponseType: EXPIRED_TOKEN
+#        RestApiId:
+#          Ref: 'ApiGatewayRestApi'
+#        StatusCode: '401'
+#      AuthFailureGatewayResponse:
+#        Type: 'AWS::ApiGateway::GatewayResponse'
+#        Properties:
+#          ResponseParameters:
+#            gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
+#            gatewayresponse.header.Access-Control-Allow-Headers: "'*'"
+#          ResponseType: UNAUTHORIZED
+#          RestApiId:
+#            Ref: 'ApiGatewayRestApi'
+#          StatusCode: '401'
+
